@@ -1,0 +1,131 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+
+body {
+  margin: 0;
+  font-family: 'Poppins', sans-serif;
+  background: #010b22; /* Black base */
+  color: #f1c40f;   /* Golden text */
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  padding: 40px 10px;
+}
+
+.container {
+  width: 95%;
+  max-width: 650px;
+}
+
+/* Title */
+h1, h2, h3 {
+  text-align: center;
+  margin: 10px 0;
+  background: linear-gradient(90deg, #FFD700, #FFB400, #FFD700);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Cards */
+.card {
+  background: rgba(20, 20, 20, 0.9);
+  border-radius: 20px;
+  padding: 20px;
+  margin-top: 20px;
+  box-shadow: 0 8px 32px rgba(255, 215, 0, 0.15);
+  border: 1px solid rgba(255, 215, 0, 0.25);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(255, 215, 0, 0.3);
+}
+
+/* Inputs & Select */
+label {
+  display: block;
+  margin-top: 12px;
+  font-weight: 600;
+  color: #FFD700;
+}
+
+input, select {
+  width: 100%;
+  padding: 12px;
+  margin-top: 8px;
+  border-radius: 12px;
+  border: none;
+  outline: none;
+  font-size: 15px;
+  background: #111;
+  color: #FFD700;
+  box-shadow: inset 0 2px 5px rgba(0,0,0,0.6);
+}
+
+input::placeholder {
+  color: rgba(255, 215, 0, 0.6);
+}
+
+select {
+  cursor: pointer;
+}
+
+/* Buttons */
+.btn {
+  width: 100%;
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(90deg, #FFD700, #FFB400, #FFD700);
+  color: #000;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.btn:hover {
+  transform: scale(1.05);
+  background: linear-gradient(90deg, #FFB400, #FFD700, #FFB400);
+}
+
+/* Table */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+
+th, td {
+  text-align: center;
+  padding: 12px;
+  border-bottom: 1px solid rgba(255, 215, 0, 0.2);
+  color: #FFD700;
+}
+
+th {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* Delete Button */
+.delete-btn {
+  background: linear-gradient(90deg, #ff4b2b, #ff1a1a);
+  border: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.delete-btn:hover {
+  background: linear-gradient(90deg, #ff1a1a, #ff4b2b);
+  transform: scale(1.1);
+}
+
+/* Summary */
+.summary {
+  text-align: center;
+}

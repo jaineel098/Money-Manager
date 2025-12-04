@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Money Manager — Clean Single File</title>
+
+<!-- UI CSS (your gold/dark theme + animations) -->
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+
+:root{
+  --gold: #FFD700;
+  --gold2: #FFB400;
+  --bg: #010b22;
+  --card: rgba(20,20,20,0.92);
+  --text: #f1c40f;
+  --input: #111;
+  --light-bg: #f6f6f6;
+  --light-card: #fff;
+  --light-text: #111;
+  --radius: 14px;
+  --ease: cubic-bezier(.2,.9,.3,1);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:'Poppins',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  display:flex;
+  justify-content:center;
+  align-items:flex-start;
+  min-height:100vh;
+  padding:36px 12px;
+  transition:background .28s var(--ease), color .28s var(--ease);
+}
+body.light{ background:var(--light-bg); color:var(--light-text); }
+
+.container{ width:95%; max-width:720px; }
+
+/* Titles */
+h1,h2,h3{
+  text-align:center;
+  margin:8px 0;
+  background:linear-gradient(90deg,var(--gold),var(--gold2),var(--gold));
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+}
+
+/* Card */
+.card{
+  background:var(--card);
+  border-radius:calc(var(--radius) + 6px);
+  padding:20px;
+  margin-top:18px;
+  box-shadow:0 10px 34px rgba(255,215,0,0.10);
+  border:1px solid rgba(255,215,0,0.18);
+  transition: transform .28s var(--ease), box-shadow .28s var(--ease), background .28s var(--ease);
+}
+body.light .card{ background:var(--light-card); border:1px solid rgba(0,0,0,0.08); box-shadow:0 6px 20px rgba(0,0,0,0.06); }
+.card:hover{ transform:translateY(-6px); box-shadow:0 20px 50px rgba(255,215,0,0.18); }
+
+/* Inputs */
+label{ display:block; margin-top:10px; font-weight:600; color:var(--gold); }
+body.light label{ color:#333; }
+input,select,button{ font-family:inherit; }
+input,select{
+  width:100%;
+  padding:12px 14px;
+  margin-top:8px;
+  border-radius:12px;
+  border:none;
+  outline:none;
+  font-size:15px;
+  background:var(--input);
+  color:var(--gold);
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.45);
+  transition: background .18s var(--ease), color .18s var(--ease), transform .12s;
+}
+body.light input, body.light select { background:#fff; color:#111; box-shadow: inset 0 1px 3px rgba(0,0,0,0.06); }
+input::placeholder{ color: rgba(255,215,0,0.5); } body.light input::placeholder{ color:#999; }
+
+/* Buttons */
+.btn{
+  display:inline-block;
+  padding:12px 14px;
+  border-radius:12px;
+  border:none;
+  background: linear-gradient(90deg,var(--gold),var(--gold2),var(--gold));
+  color:#000;
+  font-weight:700;
+  cursor:pointer;
+  transition: transform .12s ease, box-shadow .12s;
+}
+.btn:active{ transform:translateY(1px) scale(.996); }
+.btn.small{ padding:8px 10px; border-radius:10px; font-size:14px; }
+.btn.red{ background: linear-gradient(90deg,#ff4b2b,#ff1a1a); color:#fff; }
+
+/* Table */
+table{ width:100%; border-collapse:collapse; margin-top:12px; font-size:14px; }
+th,td{ text-align:center; padding:12px; border-bottom:1px solid rgba(255,215,0,0.10); color:var(--gold); }
+body.light th, body.light td{ color:#111; border-bottom:1px solid rgba(0,0,0,0.06); }
+
+/* small helpers */
+.muted{ color:rgba(255,215,0,0.6); font-size:13px; }
+.user-card{ padding:10px 12px; border-radius:10px; background: rgba(255,255,255,0.03); display:flex; justify-content:space-between; align-items:center; gap:12px; margin:8px 0; }
+body.light .user-card{ background: rgba(0,0,0,0.03); }
+
+/* Modal backdrop */
+.modal-back{ position:fixed; inset:0; display:none; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:60; }
+.modal{ width:92%; max-width:640px; max-height:84vh; overflow:auto; border-radius:12px; padding:18px; }
+
+/* Login animation */
+.animated{ opacity:0; transform:translateY(12px) scale(.98); transition: transform .42s var(--ease), opacity .42s var(--ease); }
+.animated.show{ opacity:1; transform:translateY(0) scale(1); }
+
+/* topbar */
+.topbar{ display:flex; justify-content:flex-end; gap:8px; align-items:center; margin-bottom:8px; }
+.themeToggle{ cursor:pointer; padding:8px 12px; border-radius:8px; border:none; background:transparent; color:inherit; font-weight:600; }
+
+/* responsiveness */
+@media (max-width:520px){
+  .container{ padding:0 8px; }
+  .card{ padding:14px; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- top controls (shows after login) -->
+  <div id="topControls" class="topbar" style="display:none; max-width:720px; margin:auto;">
+    <button id="themeBtn" class="themeToggle">Toggle Theme</button>
+  </div>
+
+  <!-- LOGIN CARD -->
+  <div id="loginCard" class="card animated" style="max-width:520px; margin:auto; display:block;">
+    <h1>Money Record</h1>
+    <div style="max-width:420px; margin:auto;">
+      <label>Username</label>
+      <input id="loginUser" placeholder="username">
+      <label>Password</label>
+      <input id="loginPass" type="password" placeholder="password">
+      <div style="margin-top:12px;">
+        <button id="loginBtn" class="btn">Login</button>
+      </div>
+
+      <!-- Quick PIN area -->
+      <div id="quickArea" style="display:none; margin-top:16px;">
+        <hr style="border-color: rgba(255,215,0,0.10)">
+        <p class="muted">Quick unlock for <b id="quickUser"></b></p>
+        <input id="quickInput" placeholder="4-digit PIN">
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <button id="quickUnlock" class="btn small">Unlock</button>
+          <button id="useOther" class="btn small">Use different account</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MASTER PIN modal -->
+  <div id="masterPinModal" class="modal-back">
+    <div class="modal card">
+      <h2>Master PIN</h2>
+      <p class="muted">Enter master PIN to open Master Dashboard.</p>
+      <input id="masterPinInput" placeholder="4-digit PIN">
+      <div style="display:flex; gap:10px; margin-top:10px;">
+        <button id="masterUnlockBtn" class="btn">Unlock</button>
+        <button id="masterPinCancel" class="btn small">Cancel</button>
+      </div>
+      <p class="muted" style="margin-top:8px;">(Default PIN: <b>2222</b>)</p>
+    </div>
+  </div>
+
+  <!-- CREATE PIN modal (first-time user) -->
+  <div id="createPinModal" class="modal-back">
+    <div class="modal card">
+      <h2>Create 4-digit PIN</h2>
+      <p class="muted">Create a PIN to quick-unlock next time.</p>
+      <input id="createPinField" placeholder="4-digit PIN">
+      <div style="display:flex; gap:10px; margin-top:10px;">
+        <button id="saveCreatePin" class="btn">Save PIN</button>
+        <button id="skipCreatePin" class="btn small">Skip</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MASTER DASHBOARD -->
+  <div id="masterPanel" style="display:none;">
+    <h1>Master Dashboard</h1>
+
+    <div class="card" style="max-width:520px; margin:auto;">
+      <h2>Add User</h2>
+      <label>Username</label><input id="newUser" placeholder="username">
+      <label>Password</label><input id="newPass" type="password" placeholder="password">
+      <label>Currency</label>
+      <select id="newCur">
+        <option value="₹">₹ (INR)</option>
+        <option value="$">$ (USD)</option>
+        <option value="€">€ (EUR)</option>
+        <option value="£">£ (GBP)</option>
+        <option value="AED">AED (د.إ)</option>
+      </select>
+      <div style="display:flex; gap:8px; margin-top:10px;">
+        <button id="addUserBtn" class="btn">Add User</button>
+        <button id="changeMasterPinBtn" class="btn small">Change Master PIN</button>
+      </div>
+    </div>
+
+    <div class="card" style="max-width:520px; margin:auto;">
+      <h2>All Users</h2>
+      <input id="searchUser" placeholder="Search users...">
+      <div id="userList" style="margin-top:12px;"></div>
+    </div>
+
+    <div style="max-width:520px; margin:18px auto;">
+      <button id="masterLogoutBtn" class="btn red">Logout</button>
+    </div>
+  </div>
+
+  <!-- USER DASHBOARD -->
+  <div id="userPanel" style="display:none;">
+    <h1 id="userTitle">Account</h1>
+
+    <div class="card" style="max-width:520px; margin:auto;">
+      <h2>Add Record</h2>
+      <label>Type</label>
+      <select id="rType"><option value="income">Income</option><option value="expense">Expense</option></select>
+      <label>Description</label><input id="rDesc" placeholder="e.g. Salary">
+      <label>Amount</label><input id="rAmt" type="number" step="0.01" placeholder="0.00">
+      <div style="margin-top:10px;"><button id="addRecBtn" class="btn">Add Record</button></div>
+    </div>
+
+    <div class="card" style="max-width:520px; margin:auto;">
+      <h2>Records</h2>
+      <input id="searchRec" placeholder="Search records...">
+      <table id="recTable"><thead><tr><th>Type</th><th>Description</th><th>Amount</th><th></th></tr></thead><tbody></tbody></table>
+    </div>
+
+    <div class="summary card" style="max-width:520px; margin:auto;">
+      <h3>Total Income: <span id="tInc">0</span></h3>
+      <h3>Total Expense: <span id="tExp">0</span></h3>
+      <h2>Balance: <span id="tBal">0</span></h2>
+    </div>
+
+    <div style="max-width:520px; margin:18px auto;">
+      <button id="userLogoutBtn" class="btn red">Logout</button>
+    </div>
+  </div>
+
+  <!-- VIEW MODAL (master) -->
+  <div id="viewModal" class="modal-back">
+    <div class="modal card">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h2 id="viewTitle"></h2>
+        <button id="closeViewBtn" class="btn small">Close</button>
+      </div>
+      <input id="viewSearch" placeholder="Search records...">
+      <table id="viewTable"><thead><tr><th>Type</th><th>Description</th><th>Amount</th><th></th></tr></thead><tbody></tbody></table>
+      <div class="summary" style="margin-top:10px;">
+        <h3>Total Income: <span id="viewInc">0</span></h3>
+        <h3>Total Expense: <span id="viewExp">0</span></h3>
+        <h2>Balance: <span id="viewBal">0</span></h2>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHANGE MASTER PIN -->
+  <div id="changePinModal" class="modal-back">
+    <div class="modal card">
+      <h2>Change Master PIN</h2>
+      <p class="muted">Enter current PIN then new 4-digit PIN.</p>
+      <input id="curMasterPin" placeholder="Current PIN">
+      <input id="newMasterPin" placeholder="New PIN (4 digits)">
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <button id="confirmChangePin" class="btn small">Change</button>
+        <button id="cancelChangePin" class="btn small">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- SCRIPT -->
+<script>
+/* ---------- CONFIG ---------- */
+const MASTER_USER = 'Adi';
+const MASTER_PASS = '9814';
+const DB_KEY = 'money_manager_db_v3';
+const THEME_KEY = 'money_theme_v3';
+const MASTER_PIN_KEY = 'money_master_pin_v3';
+const LAST_USER_KEY = 'money_last_user_v3';
+const DEFAULT_MASTER_PIN = '2222';
+
+/* ---------- STORAGE ---------- */
+let db = JSON.parse(localStorage.getItem(DB_KEY) || '{}');
+function saveDB(){ localStorage.setItem(DB_KEY, JSON.stringify(db)); }
+
+/* master pin */
+function getMasterPin(){ return localStorage.getItem(MASTER_PIN_KEY) || DEFAULT_MASTER_PIN; }
+function setMasterPin(p){ localStorage.setItem(MASTER_PIN_KEY, p); }
+
+/* last user for quick PIN */
+function setLastUser(u){ if(u) localStorage.setItem(LAST_USER_KEY, u); else localStorage.removeItem(LAST_USER_KEY); }
+function getLastUser(){ return localStorage.getItem(LAST_USER_KEY); }
+
+/* ---------- ELEMENTS ---------- */
+const loginBtn = document.getElementById('loginBtn');
+const loginUser = document.getElementById('loginUser');
+const loginPass = document.getElementById('loginPass');
+
+const quickArea = document.getElementById('quickArea');
+const quickUserLabel = document.getElementById('quickUser');
+const quickInput = document.getElementById('quickInput');
+const quickUnlock = document.getElementById('quickUnlock');
+const useOtherBtn = document.getElementById('useOther');
+
+const masterPinModal = document.getElementById('masterPinModal');
+const masterPinInput = document.getElementById('masterPinInput');
+const masterUnlockBtn = document.getElementById('masterUnlockBtn');
+const masterPinCancel = document.getElementById('masterPinCancel');
+
+const createPinModal = document.getElementById('createPinModal');
+const createPinField = document.getElementById('createPinField');
+const saveCreatePinBtn = document.getElementById('saveCreatePin');
+const skipCreatePinBtn = document.getElementById('skipCreatePin');
+
+const masterPanel = document.getElementById('masterPanel');
+const userPanel = document.getElementById('userPanel');
+
+const addUserBtn = document.getElementById('addUserBtn');
+const newUserInput = document.getElementById('newUser');
+const newPassInput = document.getElementById('newPass');
+const newCur = document.getElementById('newCur');
+const searchUser = document.getElementById('searchUser');
+const userList = document.getElementById('userList');
+const masterLogoutBtn = document.getElementById('masterLogoutBtn');
+
+const addRecBtn = document.getElementById('addRecBtn');
+const rType = document.getElementById('rType');
+const rDesc = document.getElementById('rDesc');
+const rAmt = document.getElementById('rAmt');
+const recTable = document.getElementById('recTable').querySelector('tbody');
+const searchRec = document.getElementById('searchRec');
+const tInc = document.getElementById('tInc');
+const tExp = document.getElementById('tExp');
+const tBal = document.getElementById('tBal');
+const userTitle = document.getElementById('userTitle');
+const userLogoutBtn = document.getElementById('userLogoutBtn');
+
+const viewModal = document.getElementById('viewModal');
+const viewTitle = document.getElementById('viewTitle');
+const viewTable = document.getElementById('viewTable').querySelector('tbody');
+const viewSearch = document.getElementById('viewSearch');
+const viewInc = document.getElementById('viewInc');
+const viewExp = document.getElementById('viewExp');
+const viewBal = document.getElementById('viewBal');
+const closeViewBtn = document.getElementById('closeViewBtn');
+
+const changePinModal = document.getElementById('changePinModal');
+const curMasterPin = document.getElementById('curMasterPin');
+const newMasterPin = document.getElementById('newMasterPin');
+const confirmChangePin = document.getElementById('confirmChangePin');
+const cancelChangePin = document.getElementById('cancelChangePin');
+
+const themeBtn = document.getElementById('themeBtn');
+const topControls = document.getElementById('topControls');
+const loginCard = document.getElementById('loginCard');
+
+/* ---------- STATE ---------- */
+let currentUser = null;
+let currentCurrency = '₹';
+let pendingPinUser = null;
+let viewingUser = null;
+
+/* ---------- INIT ---------- */
+window.addEventListener('load', () => {
+  setTimeout(()=> loginCard.classList.add('show') ,20);
+  if(!localStorage.getItem(MASTER_PIN_KEY)) setMasterPin(DEFAULT_MASTER_PIN);
+  initTheme();
+  setupQuick();
+});
+
+/* ---------- THEME ---------- */
+function initTheme(){
+  const t = localStorage.getItem(THEME_KEY) || 'dark';
+  applyTheme(t);
+}
+function applyTheme(t){
+  if(t === 'light') document.body.classList.add('light'); else document.body.classList.remove('light');
+  localStorage.setItem(THEME_KEY, t);
+  topControls.style.display = (masterPanel.style.display === 'block' || userPanel.style.display === 'block') ? 'flex' : 'none';
+}
+themeBtn.addEventListener('click', ()=> applyTheme(document.body.classList.contains('light') ? 'dark' : 'light'));
+
+/* ---------- QUICK PIN (if last user exists) ---------- */
+function setupQuick(){
+  const last = getLastUser();
+  if(last && db[last] && db[last].pin){
+    quickUserLabel.innerText = last;
+    quickInput.value = '';
+    quickArea.style.display = 'block';
+  } else {
+    quickArea.style.display = 'none';
+  }
+}
+
+/* ---------- LOGIN ---------- */
+loginBtn.addEventListener('click', () => {
+  const u = loginUser.value.trim();
+  const p = loginPass.value;
+
+  if(!u){ alert('Enter username'); return; }
+
+  // master credentials -> show master PIN modal
+  if(u === MASTER_USER && p === MASTER_PASS){
+    loginUser.value = ''; loginPass.value = '';
+    masterPinInput.value = '';
+    masterPinModal.style.display = 'flex';
+    masterPinInput.focus();
+    return;
+  }
+
+  // if user exists and already has PIN -> show PIN-only prompt (quick area)
+  if(db[u] && db[u].pin){
+    setLastUser(u); setupQuick();
+    quickUserLabel.innerText = u;
+    quickInput.focus();
+    return;
+  }
+
+  // otherwise check username/password
+  if(db[u] && db[u].password === p){
+    // successful password login. If user has no pin -> prompt to create pin
+    currentUser = u;
+    currentCurrency = db[u].currency || '₹';
+    if(!db[u].pin){
+      pendingPinUser = u;
+      createPinField.value = '';
+      createPinModal.style.display = 'flex';
+      return;
+    }
+    // (Should not reach here often if pin exists)
+    setLastUser(u);
+    loginUser.value = ''; loginPass.value = '';
+    showUser(u);
+    return;
+  }
+
+  alert('Wrong username or password');
+});
+
+/* ---------- QUICK UNLOCK ---------- */
+quickUnlock.addEventListener('click', () => {
+  const last = getLastUser();
+  if(!last || !db[last] || !db[last].pin){ alert('No quick PIN'); return; }
+  const entered = (quickInput.value||'').trim();
+  if(!entered){ alert('Enter PIN'); return; }
+  if(db[last].pin === entered){
+    quickInput.value = '';
+    showUser(last);
+    setLastUser(last);
+  } else {
+    alert('Wrong PIN');
+  }
+});
+useOtherBtn.addEventListener('click', ()=> {
+  quickArea.style.display = 'none';
+});
+
+/* ---------- MASTER PIN UNLOCK ---------- */
+masterUnlockBtn.addEventListener('click', () => {
+  const val = (masterPinInput.value||'').trim();
+  if(val === getMasterPin()){
+    masterPinModal.style.display = 'none';
+    loginCard.style.display = 'none';
+    masterPanel.style.display = 'block';
+    topControls.style.display = 'flex';
+    loadUsers();
+  } else alert('Wrong master PIN');
+});
+masterPinCancel.addEventListener('click', ()=> masterPinModal.style.display = 'none');
+
+/* ---------- CREATE PIN (first time user) ---------- */
+saveCreatePinBtn.addEventListener('click', () => {
+  const pin = (createPinField.value||'').trim();
+  if(!/^\d{4}$/.test(pin)){ alert('PIN must be 4 digits'); return; }
+  if(!pendingPinUser){ alert('No user pending'); createPinModal.style.display='none'; return; }
+  db[pendingPinUser].pin = pin;
+  saveDB();
+  setLastUser(pendingPinUser);
+  const user = pendingPinUser;
+  pendingPinUser = null;
+  createPinModal.style.display = 'none';
+  showUser(user);
+});
+skipCreatePinBtn.addEventListener('click', () => {
+  if(!pendingPinUser){ createPinModal.style.display='none'; return; }
+  setLastUser(pendingPinUser);
+  const user = pendingPinUser;
+  pendingPinUser = null;
+  createPinModal.style.display = 'none';
+  showUser(user);
+});
+
+/* ---------- MASTER: add user, list, search, delete, reset PIN ---------- */
+addUserBtn.addEventListener('click', () => {
+  const u = (newUserInput.value||'').trim();
+  const p = (newPassInput.value||'').trim();
+  const c = newCur.value;
+  if(!u || !p){ alert('Enter username & password'); return; }
+  if(db[u]){ alert('User exists'); return; }
+  db[u] = { password: p, currency: c, records: [] };
+  saveDB();
+  newUserInput.value = ''; newPassInput.value = '';
+  loadUsers();
+});
+
+function loadUsers(){
+  userList.innerHTML = '';
+  const keys = Object.keys(db);
+  if(keys.length === 0){ userList.innerHTML = '<p class="muted">No users yet.</p>'; return; }
+  keys.forEach(k => {
+    const div = document.createElement('div'); div.className = 'user-card';
+    const pinLabel = db[k].pin ? ' • PIN set' : ' • no PIN';
+    div.innerHTML = `<div><b>${k}</b><div class="muted">${(db[k].records||[]).length} records${pinLabel} • ${db[k].currency||'₹'}</div></div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn small" onclick="viewUserRecords('${k}')">View</button>
+        <button class="btn small" onclick="openAsMaster('${k}')">Open</button>
+        <button class="btn small" onclick="resetUserPin('${k}')">Reset PIN</button>
+        <button class="delete-btn" onclick="deleteUser('${k}')">Delete</button>
+      </div>`;
+    userList.appendChild(div);
+  });
+}
+
+searchUser.addEventListener('input', ()=> {
+  const q = searchUser.value.toLowerCase().trim();
+  [...userList.children].forEach(c => c.style.display = c.innerText.toLowerCase().includes(q) ? '' : 'none');
+});
+
+function deleteUser(name){
+  if(!confirm(`Delete ${name} and all records?`)) return;
+  delete db[name];
+  saveDB();
+  if(getLastUser() === name) setLastUser(null);
+  loadUsers();
+  alert('Deleted ' + name);
+}
+function resetUserPin(name){
+  if(!db[name]) return alert('No such user');
+  if(!confirm('Reset PIN for ' + name + '?')) return;
+  delete db[name].pin; saveDB();
+  if(getLastUser() === name) setLastUser(null);
+  loadUsers();
+  alert('PIN reset');
+}
+
+/* ---------- MASTER MODAL VIEW ---------- */
+function viewUserRecords(name){
+  viewingUser = name;
+  viewTitle.innerText = `${name}'s Records`;
+  viewSearch.value = '';
+  renderView();
+  viewModal.style.display = 'flex';
+}
+closeViewBtn.addEventListener('click', ()=> { viewModal.style.display = 'none'; viewingUser = null; });
+
+function renderView(){
+  viewTable.innerHTML = '';
+  if(!db[viewingUser]) return;
+  const recs = db[viewingUser].records || [];
+  let inc=0, exp=0;
+  recs.forEach((r,i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${r.type}</td><td>${r.desc}</td><td>${db[viewingUser].currency||'₹'}${r.amt}</td>
+      <td><button class="delete-btn" onclick="deleteViewRec(${i})">Delete</button></td>`;
+    viewTable.appendChild(tr);
+    if(r.type === 'income') inc += r.amt; else exp += r.amt;
+  });
+  viewInc.innerText = (db[viewingUser].currency||'₹') + inc;
+  viewExp.innerText = (db[viewingUser].currency||'₹') + exp;
+  viewBal.innerText = (db[viewingUser].currency||'₹') + (inc - exp);
+}
+viewSearch.addEventListener('input', ()=> {
+  const q = viewSearch.value.toLowerCase().trim();
+  [...viewTable.children].forEach(r => r.style.display = r.innerText.toLowerCase().includes(q) ? '' : 'none');
+});
+function deleteViewRec(i){
+  if(!confirm('Delete record?')) return;
+  db[viewingUser].records.splice(i,1);
+  saveDB();
+  renderView();
+  loadUsers();
+}
+
+/* ---------- MASTER opens user (impersonate) ---------- */
+function openAsMaster(name){
+  if(!db[name]) return alert('No such user');
+  currentUser = name;
+  currentCurrency = db[name].currency || '₹';
+  loginCard.style.display = 'none';
+  masterPanel.style.display = 'none';
+  userPanel.style.display = 'block';
+  topControls.style.display = 'flex';
+  userTitle.innerText = `${name} (Master Mode)`;
+  renderUserRecords();
+}
+
+/* ---------- USER: add/delete/search records ---------- */
+addRecBtn.addEventListener('click', ()=> {
+  if(!currentUser || !db[currentUser]) return alert('No user logged in');
+  const t = rType.value;
+  const d = rDesc.value.trim();
+  const a = parseFloat(rAmt.value);
+  if(!d || isNaN(a) || a <= 0) return alert('Enter valid description and amount');
+  db[currentUser].records.push({ type: t, desc: d, amt: a });
+  saveDB();
+  rDesc.value = ''; rAmt.value = '';
+  renderUserRecords();
+  if(masterPanel.style.display === 'block') loadUsers();
+});
+
+function renderUserRecords(){
+  recTable.innerHTML = '';
+  if(!currentUser || !db[currentUser]){ tInc.innerText = currentCurrency + '0'; tExp.innerText = currentCurrency + '0'; tBal.innerText = currentCurrency + '0'; return; }
+  const recs = db[currentUser].records || [];
+  let inc=0, exp=0;
+  recs.forEach((r,i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${r.type}</td><td>${r.desc}</td><td>${db[currentUser].currency||currentCurrency}${r.amt}</td>
+      <td><button class="delete-btn" onclick="deleteRec(${i})">Delete</button></td>`;
+    recTable.appendChild(tr);
+    if(r.type === 'income') inc += r.amt; else exp += r.amt;
+  });
+  tInc.innerText = (db[currentUser].currency||currentCurrency) + inc;
+  tExp.innerText = (db[currentUser].currency||currentCurrency) + exp;
+  tBal.innerText = (db[currentUser].currency||currentCurrency) + (inc - exp);
+}
+function deleteRec(i){
+  if(!confirm('Delete record?')) return;
+  db[currentUser].records.splice(i,1);
+  saveDB();
+  renderUserRecords();
+  if(masterPanel.style.display === 'block') loadUsers();
+}
+searchRec.addEventListener('input', ()=> {
+  const q = searchRec.value.toLowerCase().trim();
+  [...recTable.children].forEach(r => r.style.display = r.innerText.toLowerCase().includes(q) ? '' : 'none');
+});
+
+/* ---------- SHOW USER DASHBOARD after PIN or PIN creation ---------- */
+function showUser(user){
+  currentUser = user;
+  currentCurrency = db[user].currency || '₹';
+  loginCard.style.display = 'none';
+  masterPanel.style.display = 'none';
+  userPanel.style.display = 'block';
+  topControls.style.display = 'flex';
+  userTitle.innerText = user + "'s Account";
+  renderUserRecords();
+  setLastUser(user);
+}
+
+/* ---------- LOGOUT ---------- */
+masterLogoutBtn.addEventListener('click', ()=> location.reload());
+userLogoutBtn.addEventListener('click', ()=> location.reload());
+
+/* ---------- CHANGE MASTER PIN ---------- */
+changeMasterPinBtn.addEventListener('click', ()=> changePinModal.style.display = 'flex');
+cancelChangePin.addEventListener('click', ()=> changePinModal.style.display = 'none');
+confirmChangePin.addEventListener('click', ()=> {
+  const cur = (curMasterPin.value||'').trim();
+  const np = (newMasterPin.value||'').trim();
+  if(cur !== getMasterPin()) return alert('Current PIN incorrect');
+  if(!/^\d{4}$/.test(np)) return alert('New PIN must be 4 digits');
+  setMasterPin(np);
+  alert('Master PIN updated');
+  changePinModal.style.display = 'none';
+});
+
+/* ---------- Utilities ---------- */
+function setLastUserLocal(u){ setLastUser(u); setupQuick(); }
+function setupQuick(){ const last = getLastUser(); if(last && db[last] && db[last].pin){ quickUserLabel.innerText = last; quickInput.value = ''; quickArea.style.display = 'block'; } else quickArea.style.display = 'none'; }
+
+/* ensure master PIN default */
+if(!localStorage.getItem(MASTER_PIN_KEY)) setMasterPin(DEFAULT_MASTER_PIN);
+
+/* save DB initially (no-op if empty) */
+saveDB();
+
+/* expose a few fns globally for inline use if needed */
+window.viewUserRecords = viewUserRecords;
+window.openAsMaster = openAsMaster;
+window.deleteUser = deleteUser;
+window.resetUserPin = resetUserPin;
+
+</script>
+</body>
+</html>
